@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Written for roothide; the Makefile rewrites the paths when building SCHEME=rootless -->
+	<key>AllowedProcesses</key>
+	<array>
+		<string>com.apple.mobilesafari</string>
+	</array>
+	<!-- Only granted while the Settings pane's flag file exists, so a compromised
+	     Safari cannot widen its own access. FilePath is not passed through jbroot(). -->
+	<key>Conditions</key>
+	<array>
+		<dict>
+			<key>ConditionType</key>
+			<string>FileExistance</string>
+			<key>FilePath</key>
+			<string>/var/mobile/Library/Preferences/com.qn.safaripicker.system_access</string>
+		</dict>
+	</array>
+	<!-- "/rootfs/" -> the real root file system -->
+	<key>Extensions</key>
+	<array>
+		<dict>
+			<key>type</key>
+			<string>file</string>
+			<key>extension_class</key>
+			<string>com.apple.app-sandbox.read</string>
+			<key>path</key>
+			<string>/rootfs/</string>
+		</dict>
+	</array>
+</dict>
+</plist>

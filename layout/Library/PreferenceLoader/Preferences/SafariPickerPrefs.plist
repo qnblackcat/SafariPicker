@@ -1,0 +1,10 @@
+{
+	entry = {
+		bundle = SafariPickerPrefs;
+		cell = PSLinkCell;
+		detail = SAPRootListController;
+		icon = icon.png;
+		isController = 1;
+		label = SafariPicker;
+	};
+}

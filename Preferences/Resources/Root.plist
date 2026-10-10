@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>title</key>
+	<string>SafariPicker</string>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>🔗 Link Menu</string>
+			<key>footerText</key>
+			<string>Extra items in the menu shown when you long-press a link.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>label</key>
+			<string>New Tab + Background</string>
+			<key>key</key>
+			<string>bothOpenOptionsEnabled</string>
+			<key>default</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>label</key>
+			<string>Open in Private / Normal Mode</string>
+			<key>key</key>
+			<string>oppositeModeEnabled</string>
+			<key>default</key>
+			<true/>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>📤 Upload</string>
+			<key>footerText</key>
+			<string>Adds “Local Files” to the file upload menu. Read only.
+Some folders stay blocked unless System File Access below is on.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>label</key>
+			<string>Upload Any File</string>
+			<key>key</key>
+			<string>uploadAnyFileEnabled</string>
+			<key>default</key>
+			<false/>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>⚠️ Dangerous</string>
+			<key>requiresUpload</key>
+			<true/>
+			<key>footerText</key>
+			<string>Lets Safari read every file on the device, including other apps' data.
+Risk: a website exploiting a Safari bug could read them too.
+Turning it off applies once Safari is closed.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>label</key>
+			<string>Allow System File Access</string>
+			<key>requiresUpload</key>
+			<true/>
+			<key>key</key>
+			<string>systemFileAccessEnabled</string>
+			<key>default</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Close Safari</string>
+			<key>requiresUpload</key>
+			<true/>
+			<key>action</key>
+			<string>closeSafari</string>
+		</dict>
+	</array>
+</dict>
+</plist>

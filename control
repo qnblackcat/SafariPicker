@@ -1,0 +1,9 @@
+Package: com.qn.safaripicker
+Name: SafariPicker
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Extra link menu options and upload-any-file for Safari.
+Maintainer: Qn
+Author: Qn
+Section: Tweaks
+Depends: firmware (>= 15.0), mobilesubstrate, preferenceloader, com.opa334.libsandy (>= 1.1.6)
