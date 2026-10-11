@@ -247,7 +247,9 @@ extern char **environ;
 
 	PSSpecifier *specifier = [self specifierAtIndexPath:indexPath];
 	BOOL dangerous = [[specifier propertyForKey:@"key"] isEqualToString:kSAPPrefSystemFileAccess];
-	cell.textLabel.textColor = dangerous ? [UIColor systemRedColor] : [UIColor labelColor];
+	// Buttons keep the tint color, like Settings' own link rows
+	BOOL button = specifier.cellType == PSButtonCell;
+	cell.textLabel.textColor = dangerous ? [UIColor systemRedColor] : button ? [UIColor systemBlueColor] : [UIColor labelColor];
 	if([cell isKindOfClass:[PSControlTableCell class]])
 	{
 		UIControl *control = ((PSControlTableCell *)cell).control;
