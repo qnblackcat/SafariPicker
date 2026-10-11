@@ -81,7 +81,17 @@ extern char **environ;
 
 	if(uploadEnabled && !shown)
 	{
-		[self insertContiguousSpecifiers:self.uploadSpecifiers atIndex:_specifiers.count animated:YES];
+		// Right below the Upload Any File switch, above the Other section
+		PSSpecifier *uploadSwitch = nil;
+		for(PSSpecifier *specifier in _specifiers)
+		{
+			if([[specifier propertyForKey:@"key"] isEqualToString:kSAPPrefUploadAnyFile])
+			{
+				uploadSwitch = specifier;
+				break;
+			}
+		}
+		[self insertContiguousSpecifiers:self.uploadSpecifiers afterSpecifier:uploadSwitch animated:YES];
 	}
 	else if(!uploadEnabled && shown)
 	{
@@ -215,6 +225,13 @@ extern char **environ;
 		default:
 			return fallback;
 	}
+}
+
+#pragma mark Other
+
+- (void)openSourceCode
+{
+	[[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://github.com/qnblackcat/SafariPicker"] options:@{} completionHandler:nil];
 }
 
 - (void)showMessage:(NSString *)message
