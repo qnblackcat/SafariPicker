@@ -2,6 +2,8 @@
 
 Extra link menu options and upload-any-file for Safari, based on parts of [SafariPlus](https://github.com/opa334/SafariPlus).
 
+<img width="1179" height="1179" alt="Picroll_20261011_174355" src="https://github.com/user-attachments/assets/430d85bb-0282-4fde-b951-8e9b65065266" />
+
 ## Features
 
 - **New Tab + Background**: "Open in New Tab" and "Open in Background" side by side in the link menu.
