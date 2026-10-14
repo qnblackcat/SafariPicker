@@ -18,7 +18,7 @@
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>label</key>
-			<string>New Tab + Background</string>
+			<string>Open in New Tab + Background</string>
 			<key>key</key>
 			<string>bothOpenOptionsEnabled</string>
 			<key>default</key>
@@ -39,10 +39,29 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
+			<string>🔍 Toolbar</string>
+			<key>footerText</key>
+			<string>Long-press the Share button to open Find on Page. </string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>label</key>
+			<string>Share Button Find</string>
+			<key>key</key>
+			<string>shareFindEnabled</string>
+			<key>default</key>
+			<true/>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
 			<string>📤 Upload</string>
 			<key>footerText</key>
 			<string>Adds “Local Files” to the file upload menu. Read only.
-Some folders stay blocked unless System File Access below is on.</string>
+Some folders stay blocked unless System File Access is on.</string>
 		</dict>
 		<dict>
 			<key>cell</key>

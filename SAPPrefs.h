@@ -6,6 +6,7 @@
 #define kSAPPrefBothOpenOptions @"bothOpenOptionsEnabled"
 #define kSAPPrefOppositeMode @"oppositeModeEnabled"
 #define kSAPPrefUploadAnyFile @"uploadAnyFileEnabled"
+#define kSAPPrefShareFind @"shareFindEnabled"
 #define kSAPPrefSystemFileAccess @"systemFileAccessEnabled"
 
 // Real path (not jbroot): sandyd evaluates libSandy profile conditions without jbroot(),

@@ -12,7 +12,7 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = SafariPicker
 
-SafariPicker_FILES = LinkMenu.x FileUpload.x SAPFilePickerViewController.m SAPDiagnostics.m SAPSandbox.m SAPPrefs.m
+SafariPicker_FILES = LinkMenu.x ShareFind.x FileUpload.x SAPFilePickerViewController.m SAPDiagnostics.m SAPSandbox.m SAPPrefs.m
 SafariPicker_CFLAGS = -fobjc-arc -Ivendor/libsandy -DSAP_DIAGNOSTICS=$(DIAGNOSTICS)
 SafariPicker_LDFLAGS = -Lvendor/libsandy/$(THEOS_PACKAGE_SCHEME) -lsandy
 SafariPicker_FRAMEWORKS = UIKit UniformTypeIdentifiers

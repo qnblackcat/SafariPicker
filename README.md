@@ -8,6 +8,7 @@ Extra link menu options and upload-any-file for Safari, based on parts of [Safar
 
 - **New Tab + Background**: "Open in New Tab" and "Open in Background" side by side in the link menu.
 - **Private / Normal Mode**: open a long-pressed link in the other browsing mode.
+- **Share Button Find**: long-press the Share button to open Find on Page (original idea by p2kdev's **SafariFind**).
 - **Upload Any File**: "Local Files" in the upload menu opens a read-only file browser with favorites, Go to Path, Copy Path, search, sorting and grouping by kind.
 
 ## File access

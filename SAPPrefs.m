@@ -12,6 +12,7 @@ NSDictionary<NSString *, id> *SAPPrefsDefaults(void)
 	return @{
 		kSAPPrefBothOpenOptions: @YES,
 		kSAPPrefOppositeMode: @YES,
+		kSAPPrefShareFind: @YES,
 		kSAPPrefUploadAnyFile: @NO,
 		kSAPPrefSystemFileAccess: @NO,
 	};
