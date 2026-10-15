@@ -195,9 +195,54 @@ static SAPSortMode SAPCurrentSortMode(void)
 
 #pragma mark - Favorites
 
-static NSArray<NSString *> *SAPFavoritePaths(void)
+// Safari's Downloads folder (On My iPhone > Downloads). It sits in an app group container whose
+// UUID is different on every device, so it is looked up by group identifier instead of stored
+static NSString *SAPSafariDownloadsPath(void)
+{
+	static NSString *downloadsPath;
+	static dispatch_once_t onceToken;
+	dispatch_once(&onceToken, ^{
+		NSFileManager *fileManager = [NSFileManager defaultManager];
+		NSString *groupsPath = @"/var/mobile/Containers/Shared/AppGroup";
+		for(NSString *uuid in [fileManager contentsOfDirectoryAtPath:groupsPath error:nil])
+		{
+			NSString *containerPath = [groupsPath stringByAppendingPathComponent:uuid];
+			NSDictionary *metadata = [NSDictionary dictionaryWithContentsOfFile:[containerPath stringByAppendingPathComponent:@".com.apple.mobile_container_manager.metadata.plist"]];
+			if(![metadata[@"MCMMetadataIdentifier"] isEqualToString:@"group.com.apple.FileProvider.LocalStorage"])
+			{
+				continue;
+			}
+
+			NSString *path = [containerPath stringByAppendingPathComponent:@"File Provider Storage/Downloads"];
+			BOOL isDirectory = NO;
+			if([fileManager fileExistsAtPath:path isDirectory:&isDirectory] && isDirectory)
+			{
+				downloadsPath = path;
+			}
+			break;
+		}
+		SAPLog(@"Safari Downloads folder: %@", downloadsPath);
+	});
+	return downloadsPath;
+}
+
+static NSString *const kSAPHideDownloadsFavoriteKey = @"HideDownloadsFavorite";
+
+static NSArray<NSString *> *SAPStoredFavoritePaths(void)
 {
 	return [SAPDefaults() stringArrayForKey:kSAPFavoriteFoldersKey] ?: @[];
+}
+
+// Safari's Downloads folder is a favorite by default, until the user removes it
+static NSArray<NSString *> *SAPFavoritePaths(void)
+{
+	NSArray<NSString *> *stored = SAPStoredFavoritePaths();
+	NSString *downloadsPath = SAPSafariDownloadsPath();
+	if(downloadsPath && ![SAPDefaults() boolForKey:kSAPHideDownloadsFavoriteKey] && ![stored containsObject:downloadsPath])
+	{
+		return [@[downloadsPath] arrayByAddingObjectsFromArray:stored];
+	}
+	return stored;
 }
 
 static BOOL SAPIsFavorite(NSString *path)
@@ -207,9 +252,13 @@ static BOOL SAPIsFavorite(NSString *path)
 
 static void SAPSetFavorite(NSString *path, BOOL favorite)
 {
-	NSMutableArray<NSString *> *paths = [SAPFavoritePaths() mutableCopy];
+	NSMutableArray<NSString *> *paths = [SAPStoredFavoritePaths() mutableCopy];
 	[paths removeObject:path];
-	if(favorite)
+	if([path isEqualToString:SAPSafariDownloadsPath()])
+	{
+		[SAPDefaults() setBool:!favorite forKey:kSAPHideDownloadsFavoriteKey];
+	}
+	else if(favorite)
 	{
 		[paths addObject:path];
 	}
@@ -218,6 +267,11 @@ static void SAPSetFavorite(NSString *path, BOOL favorite)
 
 static NSString *SAPDisplayName(NSString *path)
 {
+	// Told apart from other folders named Downloads
+	if([path isEqualToString:SAPSafariDownloadsPath()])
+	{
+		return @"iOS Downloads";
+	}
 	return [path isEqualToString:@"/"] ? @"/" : path.lastPathComponent;
 }
 

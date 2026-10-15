@@ -1,6 +1,6 @@
 Package: com.qn.safaripicker
 Name: SafariPicker
-Version: 1.2.0
+Version: 1.2.1
 Architecture: iphoneos-arm
 Description: Extra link menu options and upload-any-file for Safari.
 Maintainer: Qn
