@@ -287,6 +287,21 @@ static UIAction *SAPCopyPathAction(NSString *title, NSString *path)
 	}];
 }
 
+// filza://view/<path> opens the folder the item is in (not its viewer) in Filza. The URL scheme can't be
+// checked with canOpenURL from Safari (not in its LSApplicationQueriesSchemes), so the item is always offered
+static UIAction *SAPOpenInFilzaAction(NSString *path)
+{
+	return [UIAction actionWithTitle:@"Open in Filza" image:[UIImage systemImageNamed:@"folder.badge.gearshape"] identifier:nil handler:^(__kindof UIAction *action)
+	{
+		NSString *encodedPath = [path stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]];
+		NSURL *url = [NSURL URLWithString:[@"filza://view" stringByAppendingString:encodedPath ?: @""]];
+		[[UIApplication sharedApplication] openURL:url options:@{} completionHandler:^(BOOL success)
+		{
+			SAPLog(@"Open in Filza %@: %d", url, success);
+		}];
+	}];
+}
+
 #pragma mark - Listing
 
 // Hidden = name starts with a dot. roothide's .jbroot-* link is always kept,
@@ -1043,6 +1058,7 @@ typedef NS_ENUM(NSInteger, SAPStartSection)
 		NSString *path = [self startPathAtIndexPath:indexPath];
 		[actions addObject:[self favoriteActionForPath:path]];
 		[actions addObject:SAPCopyPathAction(@"Copy Path", path)];
+		[actions addObject:SAPOpenInFilzaAction(path)];
 	}
 	else
 	{
@@ -1052,6 +1068,7 @@ typedef NS_ENUM(NSInteger, SAPStartSection)
 			[actions addObject:[self favoriteActionForPath:entry.targetURL.path]];
 		}
 		[actions addObject:SAPCopyPathAction(@"Copy Path", entry.url.path)];
+		[actions addObject:SAPOpenInFilzaAction(entry.url.path)];
 		if(entry.isSymbolicLink)
 		{
 			[actions addObject:SAPCopyPathAction(@"Copy Link Target Path", entry.linkTargetURL.path)];
