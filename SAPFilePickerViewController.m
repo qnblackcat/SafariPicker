@@ -199,30 +199,34 @@ static SAPSortMode SAPCurrentSortMode(void)
 // UUID is different on every device, so it is looked up by group identifier instead of stored
 static NSString *SAPSafariDownloadsPath(void)
 {
+	// Only a found path is kept: a scan before libSandy granted access finds nothing, and must be retried
 	static NSString *downloadsPath;
-	static dispatch_once_t onceToken;
-	dispatch_once(&onceToken, ^{
-		NSFileManager *fileManager = [NSFileManager defaultManager];
-		NSString *groupsPath = @"/var/mobile/Containers/Shared/AppGroup";
-		for(NSString *uuid in [fileManager contentsOfDirectoryAtPath:groupsPath error:nil])
-		{
-			NSString *containerPath = [groupsPath stringByAppendingPathComponent:uuid];
-			NSDictionary *metadata = [NSDictionary dictionaryWithContentsOfFile:[containerPath stringByAppendingPathComponent:@".com.apple.mobile_container_manager.metadata.plist"]];
-			if(![metadata[@"MCMMetadataIdentifier"] isEqualToString:@"group.com.apple.FileProvider.LocalStorage"])
-			{
-				continue;
-			}
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	BOOL isDirectory = NO;
+	if(downloadsPath && [fileManager fileExistsAtPath:downloadsPath isDirectory:&isDirectory] && isDirectory)
+	{
+		return downloadsPath;
+	}
+	downloadsPath = nil;
 
-			NSString *path = [containerPath stringByAppendingPathComponent:@"File Provider Storage/Downloads"];
-			BOOL isDirectory = NO;
-			if([fileManager fileExistsAtPath:path isDirectory:&isDirectory] && isDirectory)
-			{
-				downloadsPath = path;
-			}
-			break;
+	NSString *groupsPath = @"/var/mobile/Containers/Shared/AppGroup";
+	for(NSString *uuid in [fileManager contentsOfDirectoryAtPath:groupsPath error:nil])
+	{
+		NSString *containerPath = [groupsPath stringByAppendingPathComponent:uuid];
+		NSDictionary *metadata = [NSDictionary dictionaryWithContentsOfFile:[containerPath stringByAppendingPathComponent:@".com.apple.mobile_container_manager.metadata.plist"]];
+		if(![metadata[@"MCMMetadataIdentifier"] isEqualToString:@"group.com.apple.FileProvider.LocalStorage"])
+		{
+			continue;
 		}
-		SAPLog(@"Safari Downloads folder: %@", downloadsPath);
-	});
+
+		NSString *path = [containerPath stringByAppendingPathComponent:@"File Provider Storage/Downloads"];
+		if([fileManager fileExistsAtPath:path isDirectory:&isDirectory] && isDirectory)
+		{
+			downloadsPath = path;
+		}
+		break;
+	}
+	SAPLog(@"Safari Downloads folder: %@", downloadsPath);
 	return downloadsPath;
 }
 
