@@ -46,21 +46,32 @@ static void SAPTapAfterFindAppears(void)
 	});
 }
 
-%hook _UIButtonBarButton
+// Safari turns Share's context menu back on whenever the toolbar refreshes (switching tabs),
+// and the menu then swallows the long-press. Switching it off at every touch, before it
+// starts lifting a preview, covers that without knowing when Safari does it.
+@interface SAPShareGestureDelegate : NSObject <UIGestureRecognizerDelegate>
+@end
 
-- (void)configureFromBarItem:(UIBarButtonItem *)item withAppearanceDelegate:(id)delegate
+@implementation SAPShareGestureDelegate
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch
 {
-	%orig;
-
-	if(!SAPIsShareButton(self))
+	if(SAPPrefBool(kSAPPrefShareFind))
 	{
-		return;
+		[(_UIButtonBarButton *)gestureRecognizer.view setContextMenuEnabled:NO];
 	}
+	return YES;
+}
 
+@end
+
+// Applies the setting to a Share button: our gesture on, Share's own context menu off, or the reverse
+static void SAPApplyShareFind(_UIButtonBarButton *button)
+{
 	// Bar buttons get reused and reconfigured, so the setting is applied here as well as when
 	// the gesture fires; a change shows up the next time Safari reconfigures the toolbar
 	BOOL enabled = SAPPrefBool(kSAPPrefShareFind);
-	UILongPressGestureRecognizer *gesture = objc_getAssociatedObject(self, kSAPShareGestureKey);
+	UILongPressGestureRecognizer *gesture = objc_getAssociatedObject(button, kSAPShareGestureKey);
 
 	if(!enabled && !gesture)
 	{
@@ -68,22 +79,50 @@ static void SAPTapAfterFindAppears(void)
 	}
 
 	// Share has its own long-press context menu on iOS 15+, which would swallow our gesture
-	[self setContextMenuEnabled:!enabled];
+	[button setContextMenuEnabled:!enabled];
 
 	if(!gesture)
 	{
-		gesture = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(sap_shareLongPressed:)];
+		static SAPShareGestureDelegate *gestureDelegate;
+		static dispatch_once_t once;
+		dispatch_once(&once, ^{ gestureDelegate = [SAPShareGestureDelegate new]; });
+
+		gesture = [[UILongPressGestureRecognizer alloc] initWithTarget:button action:@selector(sap_shareLongPressed:)];
 		gesture.minimumPressDuration = kSAPSharePressDuration;
-		[self addGestureRecognizer:gesture];
-		objc_setAssociatedObject(self, kSAPShareGestureKey, gesture, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-		SAPLog(@"attached long-press to %@", self);
+		gesture.delegate = gestureDelegate;
+		[button addGestureRecognizer:gesture];
+		objc_setAssociatedObject(button, kSAPShareGestureKey, gesture, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+		SAPLog(@"attached long-press to %@", button);
 	}
 	gesture.enabled = enabled;
+}
+
+%hook _UIButtonBarButton
+
+- (void)configureFromBarItem:(UIBarButtonItem *)item withAppearanceDelegate:(id)delegate
+{
+	%orig;
+
+	if(SAPIsShareButton(self))
+	{
+		SAPApplyShareFind(self);
+	}
+}
+
+- (void)didMoveToWindow
+{
+	%orig;
+
+	if(self.window && SAPIsShareButton(self))
+	{
+		SAPApplyShareFind(self);
+	}
 }
 
 %new
 - (void)sap_shareLongPressed:(UILongPressGestureRecognizer *)gesture
 {
+	// Bar buttons get reused, so make sure this one is still Share
 	if(gesture.state != UIGestureRecognizerStateBegan || !SAPIsShareButton(self) || !SAPPrefBool(kSAPPrefShareFind))
 	{
 		return;
@@ -96,7 +135,7 @@ static void SAPTapAfterFindAppears(void)
 	}
 
 	id controller = [(BrowserRootViewController *)responder delegate];
-	SAPLog(@"long-press fired, root=%@, delegate=%@", responder, controller);
+	SAPLog(@"long-press recognized, root=%@, delegate=%@", responder, controller);
 	if(!controller)
 	{
 		return;
