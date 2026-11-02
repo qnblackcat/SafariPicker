@@ -13,6 +13,8 @@
 - (void)_cancel;
 - (void)_presentFullscreenViewController:(UIViewController *)viewController animated:(BOOL)animated;
 - (void)showFilePickerMenu;
+@property (nonatomic, assign) BOOL sap_bypassChooser;
+@property (nonatomic, assign) BOOL sap_finished;
 - (void)sap_presentSourceChooser;
 - (void)sap_presentLocalFilePicker;
 - (void)sap_chooseLocalFiles:(NSArray<NSURL *> *)fileURLs;
@@ -21,9 +23,6 @@
 @interface UIContextMenuConfiguration (SAPPrivate)
 @property (nonatomic, copy) UIContextMenuActionProvider actionProvider;
 @end
-
-static const void *kSAPBypassChooserKey = &kSAPBypassChooserKey;
-static const void *kSAPFinishedKey = &kSAPFinishedKey;
 
 static BOOL SAPGetBoolIvar(id obj, const char *name, BOOL *outValue)
 {
@@ -80,6 +79,11 @@ static NSArray<NSURL *> *SAPCopyForUpload(NSArray<NSURL *> *fileURLs)
 
 %hook WKFileUploadPanel
 
+// Set once "Files" is picked in our chooser, so the next -showFilePickerMenu goes to WebKit
+%property (nonatomic, assign) BOOL sap_bypassChooser;
+// Set when the panel has chosen files or cancelled; late local picks are dropped after that
+%property (nonatomic, assign) BOOL sap_finished;
+
 // Menu shown when the page accepts images / videos
 - (UIContextMenuConfiguration *)contextMenuInteraction:(UIContextMenuInteraction *)interaction configurationForMenuAtLocation:(CGPoint)location
 {
@@ -134,7 +138,7 @@ static NSArray<NSURL *> *SAPCopyForUpload(NSArray<NSURL *> *fileURLs)
 	BOOL fromMenu = NO;
 	SAPGetBoolIvar(self, "_isPresentingSubMenu", &fromMenu);
 
-	if(fromMenu || [objc_getAssociatedObject(self, kSAPBypassChooserKey) boolValue] || !SAPPrefBool(kSAPPrefUploadAnyFile))
+	if(fromMenu || self.sap_bypassChooser ||!SAPPrefBool(kSAPPrefUploadAnyFile))
 	{
 		%orig;
 		return;
@@ -145,17 +149,17 @@ static NSArray<NSURL *> *SAPCopyForUpload(NSArray<NSURL *> *fileURLs)
 
 - (void)_cancel
 {
-	objc_setAssociatedObject(self, kSAPFinishedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+	self.sap_finished = YES;
 	%orig;
 }
 
 - (void)_chooseFiles:(NSArray<NSURL *> *)fileURLs displayString:(NSString *)displayString iconImage:(UIImage *)iconImage
 {
-	objc_setAssociatedObject(self, kSAPFinishedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+	self.sap_finished = YES;
 	%orig;
 }
 
-%new
+%new(v@:)
 - (void)sap_presentSourceChooser
 {
 	BOOL isPad = [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad;
@@ -167,7 +171,7 @@ static NSArray<NSURL *> *SAPCopyForUpload(NSArray<NSURL *> *fileURLs)
 	[alert addAction:[UIAlertAction actionWithTitle:@"Files" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action)
 	{
 		WKFileUploadPanel *panel = weakSelf;
-		objc_setAssociatedObject(panel, kSAPBypassChooserKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+		panel.sap_bypassChooser = YES;
 		[panel showFilePickerMenu];
 	}]];
 
@@ -184,7 +188,7 @@ static NSArray<NSURL *> *SAPCopyForUpload(NSArray<NSURL *> *fileURLs)
 	[self _presentFullscreenViewController:alert animated:YES];
 }
 
-%new
+%new(v@:)
 - (void)sap_presentLocalFilePicker
 {
 	NSString *accessError = SAPEnsureFileAccess();
@@ -211,7 +215,7 @@ static NSArray<NSURL *> *SAPCopyForUpload(NSArray<NSURL *> *fileURLs)
 	[self _presentFullscreenViewController:navigationController animated:YES];
 }
 
-%new
+%new(v@:@)
 - (void)sap_chooseLocalFiles:(NSArray<NSURL *> *)fileURLs
 {
 	if(!fileURLs.count)
@@ -224,7 +228,7 @@ static NSArray<NSURL *> *SAPCopyForUpload(NSArray<NSURL *> *fileURLs)
 		NSArray<NSURL *> *uploadURLs = SAPCopyForUpload(fileURLs);
 
 		dispatch_async(dispatch_get_main_queue(), ^{
-			if([objc_getAssociatedObject(self, kSAPFinishedKey) boolValue])
+			if(self.sap_finished)
 			{
 				SAPLog(@"Upload panel already finished, dropping %lu file(s)", (unsigned long)uploadURLs.count);
 				return;

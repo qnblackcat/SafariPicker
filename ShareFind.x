@@ -21,10 +21,10 @@
 @end
 
 @interface _UIButtonBarButton (SAPShareFind)
+@property (nonatomic, strong) UILongPressGestureRecognizer *sap_shareGesture;
 - (void)sap_shareLongPressed:(UILongPressGestureRecognizer *)gesture;
 @end
 
-static const void *kSAPShareGestureKey = &kSAPShareGestureKey;
 // UIKit default is 0.5s; anything much shorter starts eating normal taps.
 static const NSTimeInterval kSAPSharePressDuration = 0.3;
 // Roughly how long Find takes to appear; raise it if the haptic still fires early.
@@ -71,7 +71,7 @@ static void SAPApplyShareFind(_UIButtonBarButton *button)
 	// Bar buttons get reused and reconfigured, so the setting is applied here as well as when
 	// the gesture fires; a change shows up the next time Safari reconfigures the toolbar
 	BOOL enabled = SAPPrefBool(kSAPPrefShareFind);
-	UILongPressGestureRecognizer *gesture = objc_getAssociatedObject(button, kSAPShareGestureKey);
+	UILongPressGestureRecognizer *gesture = button.sap_shareGesture;
 
 	if(!enabled && !gesture)
 	{
@@ -91,13 +91,15 @@ static void SAPApplyShareFind(_UIButtonBarButton *button)
 		gesture.minimumPressDuration = kSAPSharePressDuration;
 		gesture.delegate = gestureDelegate;
 		[button addGestureRecognizer:gesture];
-		objc_setAssociatedObject(button, kSAPShareGestureKey, gesture, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+		button.sap_shareGesture = gesture;
 		SAPLog(@"attached long-press to %@", button);
 	}
 	gesture.enabled = enabled;
 }
 
 %hook _UIButtonBarButton
+
+%property (nonatomic, strong) UILongPressGestureRecognizer *sap_shareGesture;
 
 - (void)configureFromBarItem:(UIBarButtonItem *)item withAppearanceDelegate:(id)delegate
 {
@@ -119,7 +121,7 @@ static void SAPApplyShareFind(_UIButtonBarButton *button)
 	}
 }
 
-%new
+%new(v@:@)
 - (void)sap_shareLongPressed:(UILongPressGestureRecognizer *)gesture
 {
 	// Bar buttons get reused, so make sure this one is still Share

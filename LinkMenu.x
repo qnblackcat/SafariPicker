@@ -4,12 +4,29 @@
 
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
-#import <objc/message.h>
 #import "SAPDiagnostics.h"
 #import "SAPPrefs.h"
 
 @interface _SFLinkPreviewHelper : NSObject
 - (NSURL *)url;
+@end
+
+// iOS 15.2.1 / 16.3 / 17.1 headers; still checked with respondsToSelector: since they are private
+@interface TabController : NSObject
+- (BOOL)canAddNewTabForPrivateBrowsing:(BOOL)privateBrowsing;
+@end
+
+@interface BrowserController : NSObject
+- (TabController *)tabController;
+- (BOOL)isPrivateBrowsingEnabled;
+- (BOOL)privateBrowsingEnabled;
+- (BOOL)isPrivateBrowsingAvailable;
+- (void)togglePrivateBrowsingEnabled;
+- (void)loadURLInNewTab:(NSURL *)url inBackground:(BOOL)inBackground animated:(BOOL)animated;
+@end
+
+@interface TabDocument : NSObject
+- (BrowserController *)browserController;
 @end
 
 @interface UIAction (SAPPrivate)
@@ -151,13 +168,8 @@ static id SAPGetIvar(id obj, const char *name)
 	return ivar ? object_getIvar(obj, ivar) : nil;
 }
 
-static BOOL SAPCallBool(id obj, SEL sel)
-{
-	return ((BOOL (*)(id, SEL))objc_msgSend)(obj, sel);
-}
-
 // The helper's _handler is the TabDocument the link was pressed in (iOS 16.3 / 17.1 headers)
-static id SAPBrowserControllerForTabDocument(id tabDocument)
+static BrowserController *SAPBrowserControllerForTabDocument(TabDocument *tabDocument)
 {
 	if(!tabDocument)
 	{
@@ -166,41 +178,40 @@ static id SAPBrowserControllerForTabDocument(id tabDocument)
 
 	if([tabDocument respondsToSelector:@selector(browserController)])
 	{
-		return [tabDocument performSelector:@selector(browserController)];
+		return [tabDocument browserController];
 	}
 
 	return SAPGetIvar(tabDocument, "_browserController");
 }
 
-static BOOL SAPIsPrivateBrowsing(id tabDocument, id browserController)
+static BOOL SAPIsPrivateBrowsing(TabDocument *tabDocument, BrowserController *browserController)
 {
 	for(id object in @[tabDocument ?: [NSNull null], browserController ?: [NSNull null]])
 	{
 		if([object respondsToSelector:@selector(isPrivateBrowsingEnabled)])
 		{
-			return SAPCallBool(object, @selector(isPrivateBrowsingEnabled));
+			return [object isPrivateBrowsingEnabled];
 		}
 		if([object respondsToSelector:@selector(privateBrowsingEnabled)])
 		{
-			return SAPCallBool(object, @selector(privateBrowsingEnabled));
+			return [object privateBrowsingEnabled];
 		}
 	}
 	return NO;
 }
 
 // -[TabController canAddNewTabForPrivateBrowsing:] exists on iOS 15.2.1 and 17.1
-static BOOL SAPCanOpenTab(id browserController, BOOL privateBrowsing)
+static BOOL SAPCanOpenTab(BrowserController *browserController, BOOL privateBrowsing)
 {
-	id tabController = [browserController respondsToSelector:@selector(tabController)] ? [browserController performSelector:@selector(tabController)] : nil;
-	SEL canAddSel = NSSelectorFromString(@"canAddNewTabForPrivateBrowsing:");
-	if([tabController respondsToSelector:canAddSel])
+	TabController *tabController = [browserController respondsToSelector:@selector(tabController)] ? [browserController tabController] : nil;
+	if([tabController respondsToSelector:@selector(canAddNewTabForPrivateBrowsing:)])
 	{
-		return ((BOOL (*)(id, SEL, BOOL))objc_msgSend)(tabController, canAddSel, privateBrowsing);
+		return [tabController canAddNewTabForPrivateBrowsing:privateBrowsing];
 	}
 
 	if(privateBrowsing && [browserController respondsToSelector:@selector(isPrivateBrowsingAvailable)])
 	{
-		return SAPCallBool(browserController, @selector(isPrivateBrowsingAvailable));
+		return [browserController isPrivateBrowsingAvailable];
 	}
 	return YES;
 }
@@ -208,8 +219,8 @@ static BOOL SAPCanOpenTab(id browserController, BOOL privateBrowsing)
 static UIAction *SAPOppositeModeAction(_SFLinkPreviewHelper *helper)
 {
 	NSURL *url = [helper respondsToSelector:@selector(url)] ? [helper url] : nil;
-	id tabDocument = SAPGetIvar(helper, "_handler");
-	id browserController = SAPBrowserControllerForTabDocument(tabDocument);
+	TabDocument *tabDocument = SAPGetIvar(helper, "_handler");
+	BrowserController *browserController = SAPBrowserControllerForTabDocument(tabDocument);
 	if(!url || !browserController)
 	{
 		SAPLog(@"Opposite mode: missing url (%@) or browserController (%@)", url, browserController);
@@ -218,9 +229,8 @@ static UIAction *SAPOppositeModeAction(_SFLinkPreviewHelper *helper)
 
 	// Switching the window's mode and opening a tab is what Safari's own mode button does.
 	// Both selectors exist on BrowserController in iOS 15.2.1 and 17.1.
-	SEL toggleSel = NSSelectorFromString(@"togglePrivateBrowsingEnabled");
-	SEL loadInNewTabSel = NSSelectorFromString(@"loadURLInNewTab:inBackground:animated:");
-	if(![browserController respondsToSelector:toggleSel] || ![browserController respondsToSelector:loadInNewTabSel])
+	if(![browserController respondsToSelector:@selector(togglePrivateBrowsingEnabled)] ||
+	   ![browserController respondsToSelector:@selector(loadURLInNewTab:inBackground:animated:)])
 	{
 		SAPLog(@"Opposite mode: %@ lacks toggle / loadURLInNewTab, hiding item", [browserController class]);
 		return nil;
@@ -232,16 +242,16 @@ static UIAction *SAPOppositeModeAction(_SFLinkPreviewHelper *helper)
 		return nil;
 	}
 
-	__weak id weakBrowserController = browserController;
+	__weak BrowserController *weakBrowserController = browserController;
 	NSString *title = privateBrowsing ? @"Open in Normal Mode" : @"Open in Private Mode";
 	return [UIAction actionWithTitle:title
 		image:[UIImage systemImageNamed:@"arrow.uturn.right.square"]
 		identifier:@"com.qn.safaripicker.opposite-mode"
 		handler:^(__kindof UIAction *action)
 	{
-		id bc = weakBrowserController;
-		((void (*)(id, SEL))objc_msgSend)(bc, toggleSel);
-		((void (*)(id, SEL, NSURL *, BOOL, BOOL))objc_msgSend)(bc, loadInNewTabSel, url, NO, YES);
+		BrowserController *bc = weakBrowserController;
+		[bc togglePrivateBrowsingEnabled];
+		[bc loadURLInNewTab:url inBackground:NO animated:YES];
 		SAPLog(@"Opposite mode: opened link, window private now %d (wanted %d)", SAPIsPrivateBrowsing(nil, bc), !privateBrowsing);
 	}];
 }
